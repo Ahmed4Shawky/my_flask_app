@@ -71,7 +71,7 @@ def analyze():
         return jsonify({'error': str(e)}), 500
 
 # Specify the port to listen on
-port = int(os.environ.get('PORT', 5000))
+port = 8080
 logging.info(f"Starting app on port {port}")
 
 if __name__ == '__main__':
