@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
@@ -15,19 +16,11 @@ logging.basicConfig(level=logging.INFO)
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
-# Global variables for the tokenizer and model
-tokenizer = None
-model = None
-
-def load_model_and_tokenizer():
-    global tokenizer, model
-    if tokenizer is None or model is None:
-        tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-        model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-        logging.info("Model and tokenizer loaded successfully")
-
-# Load model and tokenizer once when the application starts
-load_model_and_tokenizer()
+# Load the transformer model and tokenizer (e.g., RoBERTa)
+logging.info("Loading model and tokenizer...")
+tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+logging.info("Model and tokenizer loaded successfully")
 
 def analyze_sentiment(texts):
     # VADER sentiment analysis
@@ -78,4 +71,5 @@ def analyze():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
