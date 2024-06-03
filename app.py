@@ -13,25 +13,27 @@ nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
 # Load the transformer model and tokenizer (e.g., RoBERTa)
-tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+def load_model_and_tokenizer():
+    tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+    model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+    return tokenizer, model
 
-def analyze_sentiment(text):
+def analyze_sentiment(texts, tokenizer, model):
     # VADER sentiment analysis
-    vader_result = sia.polarity_scores(text)
+    vader_results = [sia.polarity_scores(text) for text in texts]
 
     # RoBERTa sentiment analysis
-    encoded_input = tokenizer(text, return_tensors='pt')
-    output = model(**encoded_input)
-    scores = output[0][0].detach().numpy()
-    scores = softmax(scores)
-    roberta_result = {
-        'roberta_neg': scores[0],
-        'roberta_neu': scores[1],
-        'roberta_pos': scores[2]
-    }
+    encoded_inputs = tokenizer(texts, return_tensors='pt', padding=True, truncation=True)
+    outputs = model(**encoded_inputs)
+    scores = outputs.logits.detach().numpy()
+    scores = softmax(scores, axis=1)
+    roberta_results = [{
+        'roberta_neg': score[0],
+        'roberta_neu': score[1],
+        'roberta_pos': score[2]
+    } for score in scores]
 
-    return {**vader_result, **roberta_result}
+    return [{'vader_result': vader_result, 'roberta_result': roberta_result} for vader_result, roberta_result in zip(vader_results, roberta_results)]
 
 def sentiment_to_stars(sentiment_score):
     thresholds = [0.2, 0.4, 0.6, 0.8]
@@ -48,15 +50,21 @@ def sentiment_to_stars(sentiment_score):
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.json
-    text = data['text']
-    sentiment_scores = analyze_sentiment(text)
-    star_rating = sentiment_to_stars(sentiment_scores['roberta_pos'])
-    response = {
-        'sentiment_scores': sentiment_scores,
-        'star_rating': star_rating
-    }
-    return jsonify(response)
+    try:
+        data = request.json
+        texts = data['texts']
+        
+        tokenizer, model = load_model_and_tokenizer()
+        results = analyze_sentiment(texts, tokenizer, model)
+        
+        star_ratings = [sentiment_to_stars(result['roberta_result']['roberta_pos']) for result in results]
+        response = {
+            'results': results,
+            'star_ratings': star_ratings
+        }
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
