@@ -3,22 +3,33 @@ import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
-import pandas as pd
+import logging
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Load NLTK's VADER
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
-# Load the transformer model and tokenizer (e.g., RoBERTa)
-def load_model_and_tokenizer():
-    tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-    model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-    return tokenizer, model
+# Global variables for the tokenizer and model
+tokenizer = None
+model = None
 
-def analyze_sentiment(texts, tokenizer, model):
+def load_model_and_tokenizer():
+    global tokenizer, model
+    if tokenizer is None or model is None:
+        tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+        model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+        logging.info("Model and tokenizer loaded successfully")
+
+# Load model and tokenizer once when the application starts
+load_model_and_tokenizer()
+
+def analyze_sentiment(texts):
     # VADER sentiment analysis
     vader_results = [sia.polarity_scores(text) for text in texts]
 
@@ -54,8 +65,7 @@ def analyze():
         data = request.json
         texts = data['texts']
         
-        tokenizer, model = load_model_and_tokenizer()
-        results = analyze_sentiment(texts, tokenizer, model)
+        results = analyze_sentiment(texts)
         
         star_ratings = [sentiment_to_stars(result['roberta_result']['roberta_pos']) for result in results]
         response = {
@@ -64,6 +74,7 @@ def analyze():
         }
         return jsonify(response)
     except Exception as e:
+        logging.error(f"Error during sentiment analysis: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
