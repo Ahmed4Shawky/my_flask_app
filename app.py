@@ -25,9 +25,9 @@ def analyze_sentiment(text):
     scores = output[0][0].detach().numpy()
     scores = softmax(scores)
     roberta_result = {
-        'roberta_neg': float(scores[0]),  # Convert to native Python float
-        'roberta_neu': float(scores[1]),  # Convert to native Python float
-        'roberta_pos': float(scores[2])   # Convert to native Python float
+        'roberta_neg': scores[0].item(),
+        'roberta_neu': scores[1].item(),
+        'roberta_pos': scores[2].item()
     }
 
     return {**vader_result, **roberta_result}
