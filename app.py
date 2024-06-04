@@ -24,10 +24,12 @@ def analyze_sentiment(text):
     output = model(**encoded_input)
     scores = output[0][0].detach().numpy()
     scores = softmax(scores)
+
+    # Convert float32 scores to regular float
     roberta_result = {
-        'roberta_neg': scores[0].item(),
-        'roberta_neu': scores[1].item(),
-        'roberta_pos': scores[2].item()
+        'roberta_neg': float(scores[0].item()),
+        'roberta_neu': float(scores[1].item()),
+        'roberta_pos': float(scores[2].item())
     }
 
     return {**vader_result, **roberta_result}
@@ -52,20 +54,12 @@ def analyze():
     sentiment_scores = analyze_sentiment(text)
     star_rating = sentiment_to_stars(sentiment_scores['roberta_pos'])
     
-    # Log the sentiment scores and star rating
-    app.logger.info("Sentiment scores: %s", sentiment_scores)
-    app.logger.info("Star rating: %s", star_rating)
-    
     response = {
         'sentiment_scores': sentiment_scores,
         'star_rating': star_rating
     }
     
-    # Log the complete response before returning it
-    app.logger.info("Complete response: %s", response)
-    
     return jsonify(response)
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
