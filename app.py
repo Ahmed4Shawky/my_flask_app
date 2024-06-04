@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, request, jsonify
 import nltk
@@ -17,11 +16,17 @@ logging.basicConfig(level=logging.INFO)
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
+# Lazy load the model and tokenizer
+tokenizer = None
+model = None
+
 def load_model():
-    logging.info("Loading model and tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
-    model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
-    logging.info("Model and tokenizer loaded successfully")
+    global tokenizer, model
+    if tokenizer is None or model is None:
+        logging.info("Loading model and tokenizer...")
+        tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+        model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
+        logging.info("Model and tokenizer loaded successfully")
     return tokenizer, model
 
 def analyze_sentiment(texts):
