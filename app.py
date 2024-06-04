@@ -5,6 +5,7 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
 import logging
+import threading
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -13,20 +14,26 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Load NLTK's VADER
-nltk.download('vader_lexicon')
+nltk.download('vader_lexicon', quiet=True)
 sia = SentimentIntensityAnalyzer()
 
 # Lazy load the model and tokenizer
 tokenizer = None
 model = None
+model_lock = threading.Lock()
 
 def load_model():
     global tokenizer, model
-    if tokenizer is None or model is None:
-        logging.info("Loading model and tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
-        model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
-        logging.info("Model and tokenizer loaded successfully")
+    with model_lock:
+        if tokenizer is None or model is None:
+            try:
+                logging.info("Loading model and tokenizer...")
+                tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+                model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
+                logging.info("Model and tokenizer loaded successfully")
+            except Exception as e:
+                logging.error(f"Failed to load model and tokenizer: {e}")
+                raise
     return tokenizer, model
 
 def analyze_sentiment(texts):
