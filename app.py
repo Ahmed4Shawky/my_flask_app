@@ -79,7 +79,7 @@ def analyze():
       return jsonify({'error': str(e)}), 500
 
 # Hard-code the port value
-port = 3000
+port = 8000
 logging.info(f"Starting app on port {port}")
 
 if __name__ == '__main__':
