@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-from scipy.special import softmax
 import torch
 
 # Initialize Flask app
@@ -17,28 +16,25 @@ except LookupError:
 # Load NLTK's VADER lexicon once
 sia = SentimentIntensityAnalyzer()
 
-# Lazy load transformer model and tokenizer
-def get_transformer_pipeline():
-    tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-    model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-    nlp = pipeline('sentiment-analysis', model=model, tokenizer=tokenizer)
-    return nlp
+# Load smaller transformer model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased-finetuned-sst-2-english')
+model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased-finetuned-sst-2-english')
+nlp = pipeline('sentiment-analysis', model=model, tokenizer=tokenizer)
 
 def analyze_sentiment(text):
     # VADER sentiment analysis
     vader_result = sia.polarity_scores(text)
 
-    # RoBERTa sentiment analysis
-    nlp = get_transformer_pipeline()
-    roberta_result = nlp(text)[0]
+    # DistilBERT sentiment analysis
+    distilbert_result = nlp(text)[0]
 
     sentiment_scores = {
         'vader_neg': vader_result['neg'],
         'vader_neu': vader_result['neu'],
         'vader_pos': vader_result['pos'],
-        'roberta_neg': roberta_result['score'] if roberta_result['label'] == 'LABEL_0' else 0,
-        'roberta_neu': roberta_result['score'] if roberta_result['label'] == 'LABEL_1' else 0,
-        'roberta_pos': roberta_result['score'] if roberta_result['label'] == 'LABEL_2' else 0
+        'distilbert_neg': distilbert_result['score'] if distilbert_result['label'] == 'NEGATIVE' else 0,
+        'distilbert_neu': 0,  # DistilBERT does not output neutral, we set it to 0
+        'distilbert_pos': distilbert_result['score'] if distilbert_result['label'] == 'POSITIVE' else 0
     }
 
     return sentiment_scores
@@ -58,20 +54,27 @@ def sentiment_to_stars(sentiment_score):
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.json
-    text = data['text']
-    sentiment_scores = analyze_sentiment(text)
-    star_rating = sentiment_to_stars(sentiment_scores['roberta_pos'])
+    try:
+        data = request.json
+        if 'text' not in data:
+            return jsonify({'error': 'Missing "text" key in JSON payload'}), 400
 
-    # Convert float32 values to standard float
-    sentiment_scores = {k: float(v) for k, v in sentiment_scores.items()}
+        text = data['text']
+        sentiment_scores = analyze_sentiment(text)
+        star_rating = sentiment_to_stars(sentiment_scores['distilbert_pos'])
 
-    response = {
-        'sentiment_scores': sentiment_scores,
-        'star_rating': star_rating
-    }
+        # Convert float32 values to standard float
+        sentiment_scores = {k: float(v) for k, v in sentiment_scores.items()}
 
-    return jsonify(response)
+        response = {
+            'sentiment_scores': sentiment_scores,
+            'star_rating': star_rating
+        }
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Health check endpoint
 @app.route('/')
@@ -79,4 +82,5 @@ def health_check():
     return jsonify({"status": "OK"}), 200
 
 if __name__ == "__main__":
+  
     app.run(host="0.0.0.0", port=5000)
