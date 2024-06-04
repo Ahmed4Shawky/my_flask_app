@@ -26,7 +26,7 @@ def analyze_sentiment(text):
   scores = output[0][0].detach().numpy()
   scores = softmax(scores)
 
-  # Convert numpy array to Python list
+  # Convert numpy array to Python list (fix for TypeError)
   scores_list = scores.tolist()
 
   roberta_result = {
