@@ -4,6 +4,7 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
 import torch
+import os
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -12,18 +13,15 @@ app = Flask(__name__)
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
-# Function to load the transformer model and tokenizer
-def load_transformer_model():
-    tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-    model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-    return tokenizer, model
+# Load the transformer model and tokenizer once
+tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
 
 def analyze_sentiment(text):
     # VADER sentiment analysis
     vader_result = sia.polarity_scores(text)
 
     # RoBERTa sentiment analysis
-    tokenizer, model = load_transformer_model()
     encoded_input = tokenizer(text, return_tensors='pt')
     
     with torch.no_grad():
@@ -73,5 +71,11 @@ def analyze():
 
     return jsonify(response)
 
+# Health check endpoint
+@app.route('/')
+def health_check():
+    return jsonify({"status": "OK"}), 200
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host="0.0.0.0", port=port)
