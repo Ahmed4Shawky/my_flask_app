@@ -16,8 +16,8 @@ def analyze_sentiment(text):
     scores = output[0][0].detach().numpy()
     scores = softmax(scores)
     distilbert_result = {
-        'distilbert_neg': float(scores[0]),  # Convert float32 to Python float
-        'distilbert_pos': float(scores[1])   # Convert float32 to Python float
+        'distilbert_neg': float(scores[0]),  # Convert numpy float32 to Python float
+        'distilbert_pos': float(scores[1])   # Convert numpy float32 to Python float
     }
 
     return distilbert_result
