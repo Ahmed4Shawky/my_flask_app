@@ -3,7 +3,6 @@ import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
-import os
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -78,9 +77,5 @@ def analyze():
     return jsonify(response)
 
 
-if __name__ == '__main__':
-    # Use gunicorn to start the application
-    PORT = os.environ.get('PORT', 5000)
-    if __name__ == "__main__":
-        import gunicorn
-        gunicorn.app.wsgi.run(app, bind=f"0.0.0.0:{PORT}")
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
