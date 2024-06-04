@@ -12,8 +12,8 @@ nltk.download('vader_lexicon')
 # Initialize VADER sentiment analyzer
 vader_analyzer = SentimentIntensityAnalyzer()
 
-# Load the BERT sentiment analysis model once
-bert_analyzer = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
+# Load the smaller BERT sentiment analysis model once
+bert_analyzer = pipeline('sentiment-analysis', model='distilbert-base-uncased')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
