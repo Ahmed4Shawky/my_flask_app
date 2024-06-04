@@ -71,8 +71,8 @@ def analyze():
         logging.error(f"Error during sentiment analysis: {e}")
         return jsonify({'error': str(e)}), 500
 
-# Specify the port to listen on
-port = int(os.getenv('PORT', 8080))
+# Get the port from the environment variable
+port = int(os.getenv('PORT', 8000))
 logging.info(f"Starting app on port {port}")
 
 if __name__ == '__main__':
