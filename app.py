@@ -17,17 +17,19 @@ logging.basicConfig(level=logging.INFO)
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
-# Load the transformer model and tokenizer (e.g., RoBERTa)
-logging.info("Loading model and tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-logging.info("Model and tokenizer loaded successfully")
+def load_model():
+    logging.info("Loading model and tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+    model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
+    logging.info("Model and tokenizer loaded successfully")
+    return tokenizer, model
 
 def analyze_sentiment(texts):
     # VADER sentiment analysis
     vader_results = [sia.polarity_scores(text) for text in texts]
 
-    # RoBERTa sentiment analysis
+    # Load the transformer model and tokenizer (lazy loading)
+    tokenizer, model = load_model()
     encoded_inputs = tokenizer(texts, return_tensors='pt', padding=True, truncation=True)
     outputs = model(**encoded_inputs)
     scores = outputs.logits.detach().numpy()
