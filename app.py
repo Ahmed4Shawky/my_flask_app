@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
-import os
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
+import os
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -12,12 +12,11 @@ app = Flask(__name__)
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
-# Load the transformer model and tokenizer (e.g., RoBERTa)
+# Load the transformer model and tokenizer (e.g., RoBERTa) outside of the request handlers
 tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
 model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
 
-
-def analyze_sentiment(text):
+def analyze_sentiment(text, tokenizer, model):
     # VADER sentiment analysis
     vader_result = sia.polarity_scores(text)
 
@@ -57,7 +56,7 @@ def sentiment_to_stars(sentiment_score):
 def analyze():
     data = request.json
     text = data['text']
-    sentiment_scores = analyze_sentiment(text)
+    sentiment_scores = analyze_sentiment(text, tokenizer, model)
     star_rating = sentiment_to_stars(sentiment_scores['roberta_pos'])
 
     # Convert float32 values to standard float
@@ -77,6 +76,7 @@ def analyze():
     }
 
     return jsonify(response)
+
 
 if __name__ == '__main__':
     # Use gunicorn to start the application
