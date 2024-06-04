@@ -27,12 +27,12 @@ def load_model():
     with model_lock:
         if tokenizer is None or model is None:
             try:
-                logging.info("Loading model and tokenizer...")
+                logging.info("Downloading model and tokenizer...")
                 tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')  # Use a smaller model variant here
                 model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
-                logging.info("Model and tokenizer loaded successfully")
+                logging.info("Model and tokenizer downloaded successfully")
             except Exception as e:
-                logging.error(f"Failed to load model and tokenizer: {e}")
+                logging.error(f"Failed to download model and tokenizer: {e}")
                 raise
     return tokenizer, model
 
