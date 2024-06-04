@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from transformers import pipeline
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import os
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -47,5 +48,9 @@ def analyze():
 
     return jsonify(result)
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+if __name__ == "__main__":
+    # Use gunicorn to start the application
+    PORT = os.environ.get('PORT', 5000)
+    if __name__ == "__main__":
+        import gunicorn
+        gunicorn.app.wsgi.run(app, bind=f"0.0.0.0:{PORT}")
