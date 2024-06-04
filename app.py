@@ -3,7 +3,6 @@ import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
-import pandas as pd
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -26,9 +25,9 @@ def analyze_sentiment(text):
     scores = output[0][0].detach().numpy()
     scores = softmax(scores)
     roberta_result = {
-        'roberta_neg': scores[0],
-        'roberta_neu': scores[1],
-        'roberta_pos': scores[2]
+        'roberta_neg': float(scores[0]),  # Convert to native Python float
+        'roberta_neu': float(scores[1]),  # Convert to native Python float
+        'roberta_pos': float(scores[2])   # Convert to native Python float
     }
 
     return {**vader_result, **roberta_result}
@@ -69,4 +68,4 @@ def analyze():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', port=5000)
