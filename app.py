@@ -17,78 +17,63 @@ logging.basicConfig(level=logging.INFO)
 nltk.download('vader_lexicon', quiet=True)
 sia = SentimentIntensityAnalyzer()
 
-# Lazy load the model and tokenizer
-tokenizer = None
-model = None
-model_lock = threading.Lock()
+# Pre-load the model and tokenizer (for better memory efficiency)
+tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')  # Use a smaller model variant here
+model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
+logging.info("Model and tokenizer downloaded successfully")
 
-def load_model():
-    global tokenizer, model
-    with model_lock:
-        if tokenizer is None or model is None:
-            try:
-                logging.info("Downloading model and tokenizer...")
-                tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')  # Use a smaller model variant here
-                model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
-                logging.info("Model and tokenizer downloaded successfully")
-            except Exception as e:
-                logging.error(f"Failed to download model and tokenizer: {e}")
-                raise
-    return tokenizer, model
 
 def analyze_sentiment(texts):
-    # VADER sentiment analysis
-    vader_results = [sia.polarity_scores(text) for text in texts]
+  # VADER sentiment analysis
+  vader_results = [sia.polarity_scores(text) for text in texts]
 
-    # Load the transformer model and tokenizer (lazy loading)
-    tokenizer, model = load_model()
-    encoded_inputs = tokenizer(texts, return_tensors='pt', padding=True, truncation=True)
-    outputs = model(**encoded_inputs)
-    scores = outputs.logits.detach().numpy()
-    scores = softmax(scores, axis=1)
-    roberta_results = [{
-        'roberta_neg': score[0],
-        'roberta_neu': score[1],
-        'roberta_pos': score[2]
-    } for score in scores]
+  encoded_inputs = tokenizer(texts, return_tensors='pt', padding=True, truncation=True)
+  outputs = model(**encoded_inputs)
+  scores = outputs.logits.detach().numpy()
+  scores = softmax(scores, axis=1)
+  roberta_results = [{
+      'roberta_neg': score[0],
+      'roberta_neu': score[1],
+      'roberta_pos': score[2]
+  } for score in scores]
 
-    return [{'vader_result': vader_result, 'roberta_result': roberta_result} for vader_result, roberta_result in zip(vader_results, roberta_results)]
+  return [{'vader_result': vader_result, 'roberta_result': roberta_result} for vader_result, roberta_result in zip(vader_results, roberta_results)]
 
 def sentiment_to_stars(sentiment_score):
-    thresholds = [0.2, 0.4, 0.6, 0.8]
-    if sentiment_score <= thresholds[0]:
-        return 1
-    elif sentiment_score <= thresholds[1]:
-        return 2
-    elif sentiment_score <= thresholds[2]:
-        return 3
-    elif sentiment_score <= thresholds[3]:
-        return 4
-    else:
-        return 5
+  thresholds = [0.2, 0.4, 0.6, 0.8]
+  if sentiment_score <= thresholds[0]:
+      return 1
+  elif sentiment_score <= thresholds[1]:
+      return 2
+  elif sentiment_score <= thresholds[2]:
+      return 3
+  elif sentiment_score <= thresholds[3]:
+      return 4
+  else:
+      return 5
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    try:
-        data = request.json
-        texts = data['texts']
-        
-        results = analyze_sentiment(texts)
-        
-        star_ratings = [sentiment_to_stars(result['roberta_result']['roberta_pos']) for result in results]
-        response = {
-            'results': results,
-            'star_ratings': star_ratings
-        }
-        return jsonify(response)
-    except Exception as e:
-        logging.error(f"Error during sentiment analysis: {e}")
-        return jsonify({'error': str(e)}), 500
+  try:
+      data = request.json
+      texts = data['texts']
+
+      results = analyze_sentiment(texts)
+
+      star_ratings = [sentiment_to_stars(result['roberta_result']['roberta_pos']) for result in results]
+      response = {
+          'results': results,
+          'star_ratings': star_ratings
+      }
+      return jsonify(response)
+  except Exception as e:
+      logging.error(f"Error during sentiment analysis: {e}")
+      return jsonify({'error': str(e)}), 500
 
 # Hard-code the port value
 port = 3000
 logging.info(f"Starting app on port {port}")
 
 if __name__ == '__main__':
-    # Run the app
-    app.run(host='0.0.0.0', port=port)
+  # Run the app
+  app.run(host='0.0.0.0', port=port)
