@@ -17,7 +17,7 @@ nltk.download('vader_lexicon', quiet=True)
 sia = SentimentIntensityAnalyzer()
 
 # Pre-load the model and tokenizer (for better memory efficiency)
-tokenizer = AutoTokenizer.from_pretrained('flaubert-base-uncased')
+tokenizer = AutoTokenizer.from_pretrained('distilroberta-base')
 model = AutoModelForSequenceClassification.from_pretrained(tokenizer.model_name_or_path)
 logging.info("Model and tokenizer downloaded successfully")
 
