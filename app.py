@@ -1,24 +1,15 @@
 from flask import Flask, request, jsonify
-import nltk
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Load NLTK's VADER
-nltk.download('vader_lexicon', download_dir='/tmp')
-sia = SentimentIntensityAnalyzer()
-
 # Load the smaller DistilBERT sentiment analysis model
 tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
 model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
 
 def analyze_sentiment(text):
-    # VADER sentiment analysis
-    vader_result = sia.polarity_scores(text)
-
     # DistilBERT sentiment analysis
     encoded_input = tokenizer(text, return_tensors='pt')
     output = model(**encoded_input)
@@ -29,7 +20,7 @@ def analyze_sentiment(text):
         'distilbert_pos': scores[1]
     }
 
-    return {**vader_result, **distilbert_result}
+    return distilbert_result
 
 def sentiment_to_stars(sentiment_score):
     thresholds = [0.2, 0.4, 0.6, 0.8]
