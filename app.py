@@ -9,7 +9,7 @@ import os
 # Initialize Flask app
 app = Flask(__name__)
 
-# Load NLTK's VADER
+# Load NLTK's VADER lexicon once
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
