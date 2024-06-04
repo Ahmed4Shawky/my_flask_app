@@ -26,8 +26,7 @@ def analyze_sentiment(text):
     scores = softmax(scores)
     distilbert_result = {
         'distilbert_neg': scores[0],
-        'distilbert_neu': scores[1],
-        'distilbert_pos': scores[2]
+        'distilbert_pos': scores[1]
     }
 
     return {**vader_result, **distilbert_result}
