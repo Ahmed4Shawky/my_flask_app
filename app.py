@@ -28,7 +28,7 @@ def load_model():
         if tokenizer is None or model is None:
             try:
                 logging.info("Loading model and tokenizer...")
-                tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+                tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')  # Use a smaller model variant here
                 model = AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')
                 logging.info("Model and tokenizer loaded successfully")
             except Exception as e:
