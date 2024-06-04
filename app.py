@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+import os
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -77,6 +78,9 @@ def analyze():
 
     return jsonify(response)
 
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Use gunicorn to start the application
+    PORT = os.environ.get('PORT', 5000)
+    if __name__ == "__main__":
+        import gunicorn
+        gunicorn.app.wsgi.run(app, bind=f"0.0.0.0:{PORT}")
