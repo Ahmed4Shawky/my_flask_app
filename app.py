@@ -3,9 +3,21 @@ import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
+import wandb
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Initialize W&B
+wandb.init(
+    project="flask",  # Ensure this matches your project name on W&B
+    config={
+        "learning_rate": 0.02,
+        "architecture": "CNN",
+        "dataset": "CIFAR-100",
+        "epochs": 10,
+    }
+)
 
 # Load NLTK's VADER
 nltk.download('vader_lexicon')
@@ -69,6 +81,19 @@ def analyze():
         'roberta_neu': float(sentiment_scores['roberta_neu']),
         'roberta_pos': float(sentiment_scores['roberta_pos'])
     }
+
+    # Log sentiment scores to W&B
+    wandb.log({
+        "compound": sentiment_scores['compound'],
+        "neg": sentiment_scores['neg'],
+        "neu": sentiment_scores['neu'],
+        "pos": sentiment_scores['pos'],
+        "roberta_neg": sentiment_scores['roberta_neg'],
+        "roberta_neu": sentiment_scores['roberta_neu'],
+        "roberta_pos": sentiment_scores['roberta_pos'],
+        "star_rating": star_rating,
+        "text": text
+    })
 
     response = {
         'sentiment_scores': sentiment_scores,
