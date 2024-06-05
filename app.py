@@ -4,6 +4,10 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
 import wandb
+import os
+
+# Set the W&B API key
+os.environ['WANDB_API_KEY'] = 'f2ed7e9fc4402d58c2eea85e50256b7f8f781048'
 
 # Initialize Flask app
 app = Flask(__name__)
