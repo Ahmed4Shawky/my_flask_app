@@ -9,9 +9,6 @@ import os
 # Set the W&B API key
 os.environ['WANDB_API_KEY'] = 'f2ed7e9fc4402d58c2eea85e50256b7f8f781048'
 
-# Initialize Flask app
-app = Flask(__name__)
-
 # Initialize W&B
 wandb.init(
     project="flask",  # Ensure this matches your project name on W&B
@@ -23,6 +20,9 @@ wandb.init(
     }
 )
 
+# Initialize Flask app
+app = Flask(__name__)
+
 # Load NLTK's VADER
 nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
@@ -30,7 +30,6 @@ sia = SentimentIntensityAnalyzer()
 # Load the transformer model and tokenizer (e.g., RoBERTa)
 tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
 model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-
 
 def analyze_sentiment(text):
     # VADER sentiment analysis
@@ -53,7 +52,6 @@ def analyze_sentiment(text):
 
     return {**vader_result, **roberta_result}
 
-
 def sentiment_to_stars(sentiment_score):
     thresholds = [0.2, 0.4, 0.6, 0.8]
     if sentiment_score <= thresholds[0]:
@@ -66,7 +64,6 @@ def sentiment_to_stars(sentiment_score):
         return 4
     else:
         return 5
-
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -105,7 +102,6 @@ def analyze():
     }
 
     return jsonify(response)
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
