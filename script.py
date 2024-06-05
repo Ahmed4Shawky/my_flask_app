@@ -1,17 +1,21 @@
+import os
 import wandb
 import random
+
+# Set the W&B API key
+os.environ['WANDB_API_KEY'] = 'f2ed7e9fc4402d58c2eea85e50256b7f8f781048'
 
 # start a new wandb run to track this script
 wandb.init(
     # set the wandb project where this run will be logged
-    project="my-awesome-project",
+    project="flask",
 
     # track hyperparameters and run metadata
     config={
-    "learning_rate": 0.02,
-    "architecture": "CNN",
-    "dataset": "CIFAR-100",
-    "epochs": 10,
+        "learning_rate": 0.02,
+        "architecture": "CNN",
+        "dataset": "CIFAR-100",
+        "epochs": 10,
     }
 )
 
