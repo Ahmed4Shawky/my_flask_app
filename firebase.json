@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "public": "flask_app",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
