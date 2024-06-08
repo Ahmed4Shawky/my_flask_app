@@ -43,6 +43,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=dataset['train'],
     eval_dataset=dataset['validation']
+    use_wandb=False
 )
 
 # Train the model
