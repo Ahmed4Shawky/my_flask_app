@@ -17,12 +17,17 @@ except LookupError:
 # Load NLTK's VADER lexicon once
 sia = SentimentIntensityAnalyzer()
 
+# Global variable to store the transformer pipeline
+transformer_pipeline = None
+
 # Lazy load transformer model and tokenizer
 def get_transformer_pipeline():
-    tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-    model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
-    nlp = pipeline('sentiment-analysis', model=model, tokenizer=tokenizer)
-    return nlp
+    global transformer_pipeline
+    if transformer_pipeline is None:
+        tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+        model = AutoModelForSequenceClassification.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment')
+        transformer_pipeline = pipeline('sentiment-analysis', model=model, tokenizer=tokenizer)
+    return transformer_pipeline
 
 def analyze_sentiment(text):
     # VADER sentiment analysis
