@@ -3,7 +3,6 @@ import torch
 from transformers import RobertaConfig, RobertaForSequenceClassification
 from datasets import load_dataset
 from torch.utils.data import Dataset, DataLoader
-from torch.nn.utils.rnn import pad_sequence
 from tqdm.auto import tqdm
 
 class TweetDataset(Dataset):
@@ -64,15 +63,9 @@ train_dataset = TweetDataset(train_texts, train_labels, train_input_ids, train_a
 val_dataset = TweetDataset(val_texts, val_labels, val_input_ids, val_attention_mask)
 test_dataset = TweetDataset(test_texts, test_labels, test_input_ids, test_attention_mask)
 
-def collate_fn(batch):
-    input_ids = pad_sequence([item['input_ids'] for item in batch], batch_first=True, padding_value=0)
-    attention_mask = pad_sequence([item['attention_mask'] for item in batch], batch_first=True, padding_value=0)
-    labels = torch.tensor([item['label'] for item in batch])
-    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'label': labels}
-
-train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True, collate_fn=collate_fn)
-val_dataloader = DataLoader(val_dataset, batch_size=8, collate_fn=collate_fn)
-test_dataloader = DataLoader(test_dataset, batch_size=8, collate_fn=collate_fn)
+train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True)
+val_dataloader = DataLoader(val_dataset, batch_size=8)
+test_dataloader = DataLoader(test_dataset, batch_size=8)
 
 # Initialize the model
 config = RobertaConfig(vocab_size=len(vocab) + 2, num_labels=3)
