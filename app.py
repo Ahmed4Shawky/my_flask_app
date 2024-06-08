@@ -5,19 +5,23 @@ from datasets import load_dataset
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
-# Custom Tokenizer
 def custom_tokenizer(text, vocab_size=30522):
     tokens = re.findall(r"\w+|[^\w\s]", text, re.UNICODE)
     vocab = {}
     for token in tokens:
         if token not in vocab:
             vocab[token] = len(vocab)
-    return vocab, {idx: word for word, idx in vocab.items()}
+
+    input_ids = [vocab.get(token, vocab_size - 1) for token in tokens]
+    attention_mask = [1] * len(input_ids)
+
+    return input_ids, attention_mask, vocab, {idx: word for word, idx in vocab.items()}
+
 
 # Load the dataset
 dataset = load_dataset('cardiffnlp/tweet_eval', 'sentiment')
 texts = dataset['train']['text'] + dataset['validation']['text'] + dataset['test']['text']
-vocab, inv_vocab = custom_tokenizer(" ".join(texts))
+input_ids, attention_mask, vocab, inv_vocab = custom_tokenizer(" ".join(texts))
 
 # Inspect the dataset structure
 for batch in dataset['train']:
@@ -25,25 +29,16 @@ for batch in dataset['train']:
     break
 
 # Save the tokenizer
-torch.save({'vocab': vocab, 'inv_vocab': inv_vocab}, './custom_tokenizer.pt')
-
-# Initialize the model
-config = RobertaConfig(vocab_size=len(vocab) + 2, num_labels=3)
-model = RobertaForSequenceClassification(config)
+torch.save({'input_ids': input_ids, 'attention_mask': attention_mask, 'vocab': vocab, 'inv_vocab': inv_vocab}, './custom_tokenizer.pt')
 
 # Prepare the data loaders
-train_dataset = dataset['train']
-val_dataset = dataset['validation']
-test_dataset = dataset['test']
+train_dataset = {'input_ids': input_ids[:len(dataset['train'])], 'attention_mask': attention_mask[:len(dataset['train'])], 'label': dataset['train']['label']}
+val_dataset = {'input_ids': input_ids[len(dataset['train']):len(dataset['train']) + len(dataset['validation'])], 'attention_mask': attention_mask[len(dataset['train']):len(dataset['train']) + len(dataset['validation'])], 'label': dataset['validation']['label']}
+test_dataset = {'input_ids': input_ids[len(dataset['train']) + len(dataset['validation']):], 'attention_mask': attention_mask[len(dataset['train']) + len(dataset['validation']):], 'label': dataset['test']['label']}
 
 train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_dataloader = DataLoader(val_dataset, batch_size=8)
 test_dataloader = DataLoader(test_dataset, batch_size=8)
-
-# Debug the DataLoader
-for batch in train_dataloader:
-    print(batch)
-    break
 
 # Training loop
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
