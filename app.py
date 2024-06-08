@@ -2,8 +2,25 @@ import re
 import torch
 from transformers import RobertaConfig, RobertaForSequenceClassification
 from datasets import load_dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 from tqdm.auto import tqdm
+
+class TweetDataset(Dataset):
+    def __init__(self, texts, labels, input_ids, attention_mask):
+        self.texts = texts
+        self.labels = labels
+        self.input_ids = input_ids
+        self.attention_mask = attention_mask
+
+    def __len__(self):
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        return {
+            'input_ids': self.input_ids[idx],
+            'attention_mask': self.attention_mask[idx],
+            'label': self.labels[idx]
+        }
 
 def custom_tokenizer(texts, vocab_size=30522):
     input_ids = []
@@ -42,9 +59,9 @@ test_input_ids, test_attention_mask, _, _ = custom_tokenizer(test_texts)
 torch.save({'input_ids': train_input_ids, 'attention_mask': train_attention_mask, 'vocab': vocab, 'inv_vocab': inv_vocab}, './custom_tokenizer.pt')
 
 # Prepare the data loaders
-train_dataset = {'input_ids': train_input_ids, 'attention_mask': train_attention_mask, 'label': train_labels}
-val_dataset = {'input_ids': val_input_ids, 'attention_mask': val_attention_mask, 'label': val_labels}
-test_dataset = {'input_ids': test_input_ids, 'attention_mask': test_attention_mask, 'label': test_labels}
+train_dataset = TweetDataset(train_texts, train_labels, train_input_ids, train_attention_mask)
+val_dataset = TweetDataset(val_texts, val_labels, val_input_ids, val_attention_mask)
+test_dataset = TweetDataset(test_texts, test_labels, test_input_ids, test_attention_mask)
 
 train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_dataloader = DataLoader(val_dataset, batch_size=8)
