@@ -1,44 +1,88 @@
+import pandas as pd
+from flask import Flask, request, jsonify
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+from transformers import RobertaTokenizer, RobertaForSequenceClassification
+from scipy.special import softmax
 import torch
-from transformers import RobertaConfig, RobertaForSequenceClassification, Trainer, TrainingArguments, AutoTokenizer
-from datasets import load_dataset
 
-# Load the dataset from Hugging Face
-dataset = load_dataset('amazon_fine_food')
+# Create a simple dataset
+data = {
+    'text': [
+        "I love this product!",
+        "This movie was amazing.",
+        "The service was terrible.",
+        "This book was okay."
+    ],
+    'sentiment': ['positive', 'positive', 'negative', 'neutral']
+}
 
-# Initialize the tokenizer and model
-tokenizer = AutoTokenizer.from_pretrained("roberta-base")
-config = RobertaConfig(num_labels=5)  # Assuming 5 classes for star ratings
-model = RobertaForSequenceClassification(config)
+df = pd.DataFrame(data)
+df.to_csv('sentiment_data.csv', index=False)
 
-# Tokenize the dataset
-def tokenize(batch):
-    return tokenizer(batch['Text'], padding=True, truncation=True)
+# Load the dataset
+df = pd.read_csv('sentiment_data.csv')
 
-dataset = dataset.map(tokenize, batched=True)
+# Split the dataset into training and validation sets
+train_df = df.sample(frac=0.8, random_state=42)
+val_df = df.drop(train_df.index)
 
-# Define training arguments
-training_args = TrainingArguments(
-    output_dir='./results',
-    num_train_epochs=3,
-    per_device_train_batch_size=8,
-    per_device_eval_batch_size=8,
-    warmup_steps=500,
-    weight_decay=0.01,
-    logging_dir='./logs',
-    logging_steps=10,
-    evaluation_strategy="epoch"
-)
+# Save the preprocessed datasets
+train_df.to_csv('train_data.csv', index=False)
+val_df.to_csv('val_data.csv', index=False)
 
-# Initialize the trainer
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=dataset['train'],
-    eval_dataset=dataset['test']
-)
+# Initialize the tokenizer and model from transformers library
+tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+model = RobertaForSequenceClassification.from_pretrained('roberta-base')
 
-# Train the model
-trainer.train()
+# Initialize Flask app
+app = Flask(__name__)
 
-# Save the model
-model.save_pretrained('./custom_roberta_model')
+# Load NLTK's VADER
+nltk.download('vader_lexicon')
+sia = SentimentIntensityAnalyzer()
+
+def analyze_sentiment(text):
+    # VADER sentiment analysis
+    vader_result = sia.polarity_scores(text)
+
+    # RoBERTa sentiment analysis
+    encoded_input = tokenizer(text, return_tensors='pt')
+    output = model(**encoded_input)
+    scores = output.logits[0].detach().numpy()
+    scores = softmax(scores)
+    roberta_result = {
+        'roberta_neg': scores[0],
+        'roberta_neu': scores[1],
+        'roberta_pos': scores[2]
+    }
+
+    return {**vader_result, **roberta_result}
+
+def sentiment_to_stars(sentiment_score):
+    thresholds = [0.2, 0.4, 0.6, 0.8]
+    if sentiment_score <= thresholds[0]:
+        return 1
+    elif sentiment_score <= thresholds[1]:
+        return 2
+    elif sentiment_score <= thresholds[2]:
+        return 3
+    elif sentiment_score <= thresholds[3]:
+        return 4
+    else:
+        return 5
+
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    data = request.json
+    text = data['text']
+    sentiment_scores = analyze_sentiment(text)
+    star_rating = sentiment_to_stars(sentiment_scores['roberta_pos'])
+    response = {
+        'sentiment_scores': sentiment_scores,
+        'star_rating': star_rating
+    }
+    return jsonify(response)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
