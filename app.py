@@ -1,126 +1,44 @@
-import re
 import torch
-from transformers import RobertaConfig, RobertaForSequenceClassification
-from datasets import load_dataset
-from torch.utils.data import Dataset, DataLoader
-from torch.nn.utils.rnn import pad_sequence
-from tqdm.auto import tqdm
+from transformers import RobertaConfig, RobertaForSequenceClassification, Trainer, TrainingArguments, AutoTokenizer, AutoModelForSequenceClassification
+from datasets import load_dataset, load_from_disk
 
-class TweetDataset(Dataset):
-    def __init__(self, texts, labels, input_ids, attention_mask):
-        self.texts = texts
-        self.labels = labels
-        self.input_ids = input_ids
-        self.attention_mask = attention_mask
+# Load the dataset from the local directory
+dataset = load_from_disk('./amazon_fine_food_reviews')
 
-    def __len__(self):
-        return len(self.texts)
-
-    def __getitem__(self, idx):
-        return {
-            'input_ids': torch.tensor(self.input_ids[idx]),
-            'attention_mask': torch.tensor(self.attention_mask[idx]),
-            'label': torch.tensor(self.labels[idx])
-        }
-
-    def collate_fn(self, batch):
-        input_ids = [item['input_ids'] for item in batch]
-        attention_mask = [item['attention_mask'] for item in batch]
-        labels = [item['label'] for item in batch]
-
-        input_ids_padded = pad_sequence(input_ids, batch_first=True, padding_value=0)
-        attention_mask_padded = pad_sequence(attention_mask, batch_first=True, padding_value=0)
-
-        return {
-            'input_ids': input_ids_padded,
-            'attention_mask': attention_mask_padded,
-            'label': torch.tensor(labels)
-        }
-
-def custom_tokenizer(texts, vocab_size=30522):
-    input_ids = []
-    attention_mask = []
-    vocab = {}
-
-    for text in texts:
-        tokens = re.findall(r"\w+|[^\w\s]", text, re.UNICODE)
-        sample_input_ids = [vocab.get(token, vocab_size - 1) for token in tokens]
-        sample_attention_mask = [1] * len(sample_input_ids)
-
-        input_ids.append(sample_input_ids)
-        attention_mask.append(sample_attention_mask)
-
-        for token in tokens:
-            if token not in vocab:
-                vocab[token] = len(vocab)
-
-    vocab_size = len(vocab) + 2  # Add 2 for special tokens (PAD and UNK)
-    return input_ids, attention_mask, vocab, {idx: word for word, idx in vocab.items()}
-
-# Load the dataset
-dataset = load_dataset('cardiffnlp/tweet_eval', 'sentiment')
-train_texts = dataset['train']['text']
-train_labels = dataset['train']['label']
-val_texts = dataset['validation']['text']
-val_labels = dataset['validation']['label']
-test_texts = dataset['test']['text']
-test_labels = dataset['test']['label']
-
-train_input_ids, train_attention_mask, vocab, inv_vocab = custom_tokenizer(train_texts)
-val_input_ids, val_attention_mask, _, _ = custom_tokenizer(val_texts)
-test_input_ids, test_attention_mask, _, _ = custom_tokenizer(test_texts)
-
-# Save the tokenizer
-torch.save({'input_ids': train_input_ids, 'attention_mask': train_attention_mask, 'vocab': vocab, 'inv_vocab': inv_vocab}, './custom_tokenizer.pt')
-
-# Prepare the data loaders
-train_dataset = TweetDataset(train_texts, train_labels, train_input_ids, train_attention_mask)
-val_dataset = TweetDataset(val_texts, val_labels, val_input_ids, val_attention_mask)
-test_dataset = TweetDataset(test_texts, test_labels, test_input_ids, test_attention_mask)
-
-train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True, collate_fn=train_dataset.collate_fn)
-val_dataloader = DataLoader(val_dataset, batch_size=8, collate_fn=val_dataset.collate_fn)
-test_dataloader = DataLoader(test_dataset, batch_size=8, collate_fn=test_dataset.collate_fn)
-
-# Initialize the model
-config = RobertaConfig(vocab_size=len(vocab) + 2, num_labels=3)
+# Initialize the tokenizer and model
+tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+config = RobertaConfig(num_labels=5)  # We have 5 classes for star ratings
 model = RobertaForSequenceClassification(config)
 
-# Training loop
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-model.to(device)
+# Tokenize the dataset
+def tokenize(batch):
+    return tokenizer(batch['Text'], padding=True, truncation=True)
 
-num_epochs = 3
-optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+dataset = dataset.map(tokenize, batched=True)
 
-for epoch in range(num_epochs):
-    # Training
-    model.train()
-    total_train_loss = 0
-    for batch in tqdm(train_dataloader, desc=f"Training epoch {epoch+1}"):
-        optimizer.zero_grad()
-        input_ids = batch['input_ids'].to(device)
-        attention_mask = batch['attention_mask'].to(device)
-        labels = batch['label'].to(device)
-        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
-        loss = outputs.loss
-        loss.backward()
-        optimizer.step()
-        total_train_loss += loss.item()
+# Define training arguments
+training_args = TrainingArguments(
+    output_dir='./results',
+    num_train_epochs=3,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    warmup_steps=500,
+    weight_decay=0.01,
+    logging_dir='./logs',
+    logging_steps=10,
+    evaluation_strategy="epoch"
+)
 
-    # Validation
-    model.eval()
-    total_val_loss = 0
-    with torch.no_grad():
-        for batch in tqdm(val_dataloader, desc=f"Validation epoch {epoch+1}"):
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['label'].to(device)
-            outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
-            loss = outputs.loss
-            total_val_loss += loss.item()
+# Initialize the trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset['train'],
+    eval_dataset=dataset['test']
+)
 
-    print(f"Epoch {epoch+1}: Train loss: {total_train_loss / len(train_dataloader)}, Val loss: {total_val_loss / len(val_dataloader)}")
+# Train the model
+trainer.train()
 
 # Save the model
 model.save_pretrained('./custom_roberta_model')
