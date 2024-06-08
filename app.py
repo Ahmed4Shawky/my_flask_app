@@ -37,13 +37,13 @@ training_args = TrainingArguments(
     evaluation_strategy="epoch"
 )
 
-# Initialize the trainer
+# Initialize the trainer with use_wandb=False
 trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=dataset['train'],
     eval_dataset=dataset['validation'],
-    use_wandb=False
+    use_wandb=False  # Disable wandb integration
 )
 
 # Train the model
