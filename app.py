@@ -34,16 +34,16 @@ training_args = TrainingArguments(
     weight_decay=0.01,
     logging_dir='./logs',
     logging_steps=10,
-    evaluation_strategy="epoch"
+    evaluation_strategy="epoch",
+    run_name=None  # Disable wandb integration
 )
 
-# Initialize the trainer with use_wandb=False
+# Initialize the trainer
 trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=dataset['train'],
-    eval_dataset=dataset['validation'],
-    use_wandb=False  # Disable wandb integration
+    eval_dataset=dataset['validation']
 )
 
 # Train the model
