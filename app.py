@@ -3,7 +3,7 @@ from transformers import RobertaConfig, RobertaForSequenceClassification, Traine
 from datasets import load_dataset
 
 # Load the dataset from the local directory
-dataset = load_dataset('amazon_fine_food_reviews')
+dataset = load_dataset('/amazon_fine_food_reviews')
 
 # Initialize the tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained("roberta-base")
