@@ -17,7 +17,6 @@ def custom_tokenizer(text, vocab_size=30522):
 
     return input_ids, attention_mask, vocab, {idx: word for word, idx in vocab.items()}
 
-
 # Load the dataset
 dataset = load_dataset('cardiffnlp/tweet_eval', 'sentiment')
 texts = dataset['train']['text'] + dataset['validation']['text'] + dataset['test']['text']
@@ -26,6 +25,7 @@ input_ids, attention_mask, vocab, inv_vocab = custom_tokenizer(" ".join(texts))
 # Inspect the dataset structure
 for batch in dataset['train']:
     print(batch.keys())
+    print(batch)
     break
 
 # Save the tokenizer
@@ -39,6 +39,12 @@ test_dataset = {'input_ids': input_ids[len(dataset['train']) + len(dataset['vali
 train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_dataloader = DataLoader(val_dataset, batch_size=8)
 test_dataloader = DataLoader(test_dataset, batch_size=8)
+
+# Debug the DataLoader
+for batch in train_dataloader:
+    print(batch.keys())
+    print(batch)
+    break
 
 # Training loop
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
