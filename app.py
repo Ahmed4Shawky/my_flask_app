@@ -42,7 +42,7 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=dataset['train'],
-    eval_dataset=dataset['validation']
+    eval_dataset=dataset['validation'],
     use_wandb=False
 )
 
