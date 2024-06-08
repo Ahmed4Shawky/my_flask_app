@@ -1,13 +1,13 @@
 import torch
-from transformers import RobertaConfig, RobertaForSequenceClassification, Trainer, TrainingArguments, AutoTokenizer, AutoModelForSequenceClassification
-from datasets import load_dataset, load_from_disk
+from transformers import RobertaConfig, RobertaForSequenceClassification, Trainer, TrainingArguments, AutoTokenizer
+from datasets import load_dataset
 
 # Load the dataset from the local directory
-dataset = load_from_disk('./amazon_fine_food_reviews')
+dataset = load_dataset('amazon_fine_food_reviews')
 
 # Initialize the tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained("roberta-base")
-config = RobertaConfig(num_labels=5)  # We have 5 classes for star ratings
+config = RobertaConfig(num_labels=5)  # Assuming 5 classes for star ratings
 model = RobertaForSequenceClassification(config)
 
 # Tokenize the dataset
