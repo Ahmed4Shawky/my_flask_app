@@ -34,7 +34,8 @@ training_args = TrainingArguments(
     weight_decay=0.01,
     logging_dir='./logs',
     logging_steps=10,
-    evaluation_strategy="epoch"
+    evaluation_strategy="epoch",
+    run_name=None  # Disable wandb integration
 )
 
 # Initialize the trainer
