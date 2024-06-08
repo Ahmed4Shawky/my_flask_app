@@ -3,6 +3,7 @@ import torch
 from transformers import RobertaConfig, RobertaForSequenceClassification
 from datasets import load_dataset
 from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
 from tqdm.auto import tqdm
 
 class TweetDataset(Dataset):
@@ -17,9 +18,9 @@ class TweetDataset(Dataset):
 
     def __getitem__(self, idx):
         return {
-            'input_ids': self.input_ids[idx],
-            'attention_mask': self.attention_mask[idx],
-            'label': self.labels[idx]
+            'input_ids': torch.tensor(self.input_ids[idx]),
+            'attention_mask': torch.tensor(self.attention_mask[idx]),
+            'label': torch.tensor(self.labels[idx])
         }
 
 def custom_tokenizer(texts, vocab_size=30522):
@@ -63,9 +64,15 @@ train_dataset = TweetDataset(train_texts, train_labels, train_input_ids, train_a
 val_dataset = TweetDataset(val_texts, val_labels, val_input_ids, val_attention_mask)
 test_dataset = TweetDataset(test_texts, test_labels, test_input_ids, test_attention_mask)
 
-train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-val_dataloader = DataLoader(val_dataset, batch_size=8)
-test_dataloader = DataLoader(test_dataset, batch_size=8)
+def collate_fn(batch):
+    input_ids = pad_sequence([item['input_ids'] for item in batch], batch_first=True, padding_value=0)
+    attention_mask = pad_sequence([item['attention_mask'] for item in batch], batch_first=True, padding_value=0)
+    labels = torch.tensor([item['label'] for item in batch])
+    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'label': labels}
+
+train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True, collate_fn=collate_fn)
+val_dataloader = DataLoader(val_dataset, batch_size=8, collate_fn=collate_fn)
+test_dataloader = DataLoader(test_dataset, batch_size=8, collate_fn=collate_fn)
 
 # Initialize the model
 config = RobertaConfig(vocab_size=len(vocab) + 2, num_labels=3)
