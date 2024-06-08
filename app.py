@@ -2,8 +2,8 @@ import torch
 from transformers import RobertaConfig, RobertaForSequenceClassification, Trainer, TrainingArguments, AutoTokenizer
 from datasets import load_dataset
 
-# Load the dataset from the local directory
-dataset = load_dataset('/amazon_fine_food_reviews')
+# Load the dataset from Hugging Face
+dataset = load_dataset('amazon_fine_food')
 
 # Initialize the tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained("roberta-base")
