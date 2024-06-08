@@ -28,8 +28,11 @@ def custom_tokenizer(texts, vocab_size=30522):
 # Load the dataset
 dataset = load_dataset('cardiffnlp/tweet_eval', 'sentiment')
 train_texts = dataset['train']['text']
+train_labels = dataset['train']['label']
 val_texts = dataset['validation']['text']
+val_labels = dataset['validation']['label']
 test_texts = dataset['test']['text']
+test_labels = dataset['test']['label']
 
 train_input_ids, train_attention_mask, vocab, inv_vocab = custom_tokenizer(train_texts)
 val_input_ids, val_attention_mask, _, _ = custom_tokenizer(val_texts)
@@ -39,9 +42,9 @@ test_input_ids, test_attention_mask, _, _ = custom_tokenizer(test_texts)
 torch.save({'input_ids': train_input_ids, 'attention_mask': train_attention_mask, 'vocab': vocab, 'inv_vocab': inv_vocab}, './custom_tokenizer.pt')
 
 # Prepare the data loaders
-train_dataset = {'input_ids': train_input_ids, 'attention_mask': train_attention_mask, 'label': dataset['train']['label']}
-val_dataset = {'input_ids': val_input_ids, 'attention_mask': val_attention_mask, 'label': dataset['validation']['label']}
-test_dataset = {'input_ids': test_input_ids, 'attention_mask': test_attention_mask, 'label': dataset['test']['label']}
+train_dataset = {'input_ids': train_input_ids, 'attention_mask': train_attention_mask, 'label': train_labels}
+val_dataset = {'input_ids': val_input_ids, 'attention_mask': val_attention_mask, 'label': val_labels}
+test_dataset = {'input_ids': test_input_ids, 'attention_mask': test_attention_mask, 'label': test_labels}
 
 train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_dataloader = DataLoader(val_dataset, batch_size=8)
